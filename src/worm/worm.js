@@ -1,250 +1,337 @@
-const s = (sketch) => {
-  // Constants
+// Processing sketch for the interactive viz
+// TODO: integrate API calls, integrate React
+
+const s = (p) => {
+  /* =================== Sketch constants =================== */
   const MARGIN = 100;
-  const N_WORMS = 4;
-  const WORM_LENGTH = 50;
-  const WORM_DIAMETER = 10;
+  const N_WORMS = 16;
+  const WORM_LENGTH = 16;
+  const WORM_DIAMETER = 16;
+  const WORM_RADIUS = WORM_DIAMETER / 2;
+  // How far apart segments are spaced (affects smoothness of body)
+  const SPACING = 4;
 
-  // These constants use p5 functions and need to be set up in a function of their own
-  let RED;
-  let RED_ALPHA;
-  const GREEN_ALPHA = (alpha) => sketch.color(0, 255, 0, alpha);
-  const GRAY_ALPHA = (alpha) => sketch.color(100, 100, 100, alpha);
-  let TURN_RADIUS;
-  let UNIT_NORTH;
-
-  const setupConstants = () => {
-    RED = sketch.color(255, 0, 0);
-    RED_ALPHA = sketch.color(255, 0, 0, 100);
-    TURN_RADIUS = sketch.radians(2);
-    UNIT_NORTH = new p5.Vector(0, 1);
-  };
-
-  const TurnState = {
-    TURN_LEFT: "turn_left",
-    TURN_RIGHT: "turn_right",
-    GO_STRAIGHT: "go_straight",
+  const RED = p.color(255, 0, 0);
+  const RED_ALPHA = p.color(255, 0, 0, 100);
+  const GREEN_ALPHA = (alpha) => p.color(0, 255, 0, alpha);
+  const GRAY_ALPHA = (alpha) => p.color(100, 100, 100, alpha);
+  const TURN_RADIUS = p.radians(1);
+  const UNIT_NORTH = new p5.Vector(0, 1);
+  const randomColor = () => {
+    const r = p.random(255);
+    const g = p.random(255);
+    const b = p.random(255);
+    return [r, g, b];
   };
 
   class Worm {
     constructor(idx) {
-      this.head = new p5.Vector(sketch.width / 2, sketch.height / 2);
+      this.head = new p5.Vector(p.width / 2, p.height / 2);
       this.heading = p5.Vector.random2D();
-      this.turnState = TurnState.GO_STRAIGHT;
-      this.turnAround = false;
+      this.desiredHeading = this.heading.copy();
 
       this.body = [];
       this.bodyOrientations = [];
 
+      // Push reference
+      this.body.push(this.head);
+      this.bodyOrientations.push(this.heading);
+
+      for (let i = 0; i < WORM_LENGTH - 1; i++) {
+        this.body.push(this.head.copy());
+        this.bodyOrientations.push(this.heading.copy());
+      }
+
       this.name = "Worm " + idx;
 
       this.hovered = false;
-      this.speed = 1;
+      this.speed = 0.7 + p.random(1);
 
       // TODO: choose color based on instrument
-      this.r = sketch.random(255);
-      this.g = sketch.random(255);
-      this.b = sketch.random(255);
+      this.bodyColor = p.color(randomColor());
+      this.stripeColor = p.color(randomColor());
     }
 
-    /* Draws the worm on-screen */
+    /* =================== Drawing =================== */
     display() {
-      sketch.push();
-      sketch.stroke(this.r, this.g, this.b);
-      sketch.fill(this.r, this.g, this.b);
-      sketch.rectMode(sketch.CENTER);
+      p.push();
+      p.stroke(this.bodyColor);
+      p.fill(this.bodyColor);
+      p.rectMode(p.CENTER);
 
-      const drawEvery = sketch.int(WORM_DIAMETER / 2 / this.speed);
-
-      // TODO: change to rounded rect, add stripey genes
-      for (let i = 0; i < this.body.length; i += drawEvery) {
-        const radius =
-          i > this.body.length - drawEvery || i < drawEvery
-            ? WORM_DIAMETER / 2
-            : WORM_DIAMETER / 4;
-        this._drawWormSegment(this.body[i], this.bodyOrientations[i], radius);
+      for (let i = 1; i < WORM_LENGTH; i++) {
+        const radius = i == WORM_LENGTH - 1 ? WORM_RADIUS : WORM_RADIUS / 1.3;
+        this._drawSegment(this.body[i], this.bodyOrientations[i], radius);
       }
-      // Always include head, as a circle
-      this._drawWormSegment(this.head, this.heading, WORM_DIAMETER / 2);
-      sketch.pop();
 
-      this._displayDebugInfo();
+      let stripePositions = [8, 12, 13, 14];
+      for (let i = 0; i < stripePositions.length; i++) {
+        this._drawStripe(
+          this.body[stripePositions[i]],
+          this.bodyOrientations[stripePositions[i]],
+          1,
+          this.stripeColor
+        );
+      }
+
+      // Always include head, as a circle
+      this._drawSegment(this.head, this.heading, WORM_RADIUS);
+      p.pop();
+
+      if (debugModeOn) {
+        this._displayDebugInfo();
+      }
     }
 
-    _drawWormSegment(position, orientation, radius) {
-      sketch.push(); // Save current drawing styles
+    _drawSegment(position, orientation, radius) {
+      p.push(); // Save current drawing styles
       const angle = UNIT_NORTH.angleBetween(orientation);
-      sketch.translate(position.x, position.y);
-      sketch.rotate(angle);
-      sketch.rect(0, 0, WORM_DIAMETER, WORM_DIAMETER, radius);
-      sketch.pop();
+      p.translate(position.x, position.y);
+      p.rotate(angle);
+      p.rect(0, 0, WORM_DIAMETER, WORM_DIAMETER, radius);
+      p.pop();
+
+      // Debug for orientation
+      // p.push()
+      // p.stroke(RED);
+      // const nextPos = p5.Vector.add(
+      //   position,
+      //   p5.Vector.mult(orientation, 30)
+      // );
+      // p.line(position.x, position.y, nextPos.x, nextPos.y);
+      // p.pop()
+    }
+
+    _drawStripe(position, orientation, width, color) {
+      p.push();
+      const angle = UNIT_NORTH.angleBetween(orientation);
+      p.translate(position.x, position.y);
+      p.rotate(angle);
+      p.stroke(color);
+      p.fill(color);
+      p.rect(0, 0, WORM_DIAMETER, width);
+      p.pop();
     }
 
     _displayDebugInfo() {
-      sketch.stroke(RED);
+      p.stroke(RED);
       const nextPos = p5.Vector.add(
         this.head,
         p5.Vector.mult(this.heading, 30)
       );
-      sketch.line(this.head.x, this.head.y, nextPos.x, nextPos.y);
+      p.line(this.head.x, this.head.y, nextPos.x, nextPos.y);
+
+      const desiredPos = p5.Vector.add(
+        this.head,
+        p5.Vector.mult(this.desiredHeading, 10)
+      );
+      p.line(this.head.x, this.head.y, desiredPos.x, desiredPos.y);
+
+      const desiredAngle = this.heading.angleBetween(this.desiredHeading);
+      p.textSize(8);
+      p.noStroke();
+      p.fill(RED);
+      p.text(
+        p.degrees(desiredAngle).toFixed(2) + " deg",
+        this.head.x + 10,
+        this.head.y + 10,
+        90,
+        20
+      );
 
       // Draw hover selection area
-      sketch.noStroke();
+      p.noStroke();
       if (this.hovered) {
-        sketch.fill(GREEN_ALPHA(150));
+        p.fill(GREEN_ALPHA(150));
       } else {
-        sketch.fill(GRAY_ALPHA(150));
+        p.fill(GRAY_ALPHA(150));
       }
 
-      sketch.ellipse(
-        this.head.x,
-        this.head.y,
-        WORM_DIAMETER * 4,
-        WORM_DIAMETER * 4
-      );
+      p.ellipse(this.head.x, this.head.y, WORM_DIAMETER * 4, WORM_DIAMETER * 4);
     }
 
-    startTurnAround() {
-      if (!this.turnAround) {
-        if (sketch.random(1) < 0.5) {
-          this.turnState = TurnState.TURN_LEFT;
-        } else {
-          this.turnState = TurnState.TURN_RIGHT;
-        }
-
-        this.turnAround = true;
-      }
-    }
-
-    endTurnAround() {
-      if (this.turnAround) {
-        this.turnState = TurnState.GO_STRAIGHT;
-        this.turnAround = false;
-      }
-    }
-
+    /* =================== Mouse events =================== */
     handleMouseOver(loc) {
       if (p5.Vector.dist(loc, this.head) < WORM_DIAMETER * 2) {
         if (!this.hovered) {
-          sketch.print(this.name + " was hovered over");
+          p.print(this.name + " was hovered over");
           this.hovered = true;
+          this.speed = 0.2;
 
-          this.r = sketch.random(255);
-          this.g = sketch.random(255);
-          this.b = sketch.random(255);
+          this.bodyColor = p.color(randomColor());
+          this.stripeColor = p.color(randomColor());
+          p.cursor("pointer");
         }
       } else if (this.hovered) {
-        sketch.print(this.name + " hover exit");
+        p.print(this.name + " hover exit");
         this.hovered = false;
+        this.speed = 1;
+        p.cursor("default");
       }
     }
 
+    /* =================== Step =================== */
     step() {
-      // With small probability, change turn state.
-      // If turning, can only switch to going forward.
-      // If forward, more likely to turn?
+      // Update all segments, in reverse order
+      for (let i = WORM_LENGTH - 1; i > 0; i--) {
+        const target = this.body[i - 1];
+        const curr = this.body[i];
 
-      if (
-        this.head.x < MARGIN ||
-        this.head.x > sketch.width - MARGIN ||
-        this.head.y < MARGIN ||
-        this.head.y > sketch.height - MARGIN
-      ) {
-        this.startTurnAround();
-      } else {
-        this.endTurnAround();
-      }
+        if (p5.Vector.dist(target, curr) < SPACING) continue;
 
-      // Probabilisitc is nice, want a more "turn every" time approach
-      // Does not change direction if turnAround is active
-      if (!this.turnAround && sketch.random(1) < 0.03) {
-        if (this.turnState != TurnState.GO_STRAIGHT) {
-          this.turnState = TurnState.GO_STRAIGHT;
-        } else {
-          if (sketch.random(1) < 0.5) {
-            this.turnState = TurnState.TURN_LEFT;
-          } else {
-            this.turnState = TurnState.TURN_RIGHT;
-          }
-        }
+        const direction = p5.Vector.sub(target, curr);
+        direction.limit(this.speed);
+        curr.add(direction);
+
+        const angle = this.bodyOrientations[i].angleBetween(
+          this.bodyOrientations[i - 1]
+        );
+        this.bodyOrientations[i].rotate((angle * this.speed) / SPACING);
       }
 
       // Update head position
-      this.head = p5.Vector.add(
-        this.head,
-        p5.Vector.mult(this.heading, this.speed)
-      );
-      this.body.push(this.head);
-      if (this.body.length > WORM_LENGTH) {
-        this.body.shift(); // Remove from front
+      this.head.add(p5.Vector.mult(this.heading, this.speed));
+
+      const desiredAngle = this.heading.angleBetween(this.desiredHeading);
+      const turnAngle = p.min(p.abs(desiredAngle), TURN_RADIUS);
+      if (desiredAngle > 0) {
+        this.heading.rotate(turnAngle * this.speed);
+      } else if (desiredAngle < 0) {
+        this.heading.rotate(-turnAngle * this.speed);
+      }
+    }
+
+    applyForces(otherWorms) {
+      // Avoiding walls is weighted more than the others
+      this.desiredHeading.add(p5.Vector.mult(this._avoidWalls(), 100));
+      this.desiredHeading.add(this._explore());
+      this.desiredHeading.add(this._avoidOthers(otherWorms));
+      this.desiredHeading.limit(1);
+    }
+
+    /* =================== Behavior =================== */
+    _avoidWalls() {
+      let desiredX = this.head.x;
+      let desiredY = this.head.y;
+      if (this.head.x < MARGIN) {
+        desiredX = p.width;
+      } else if (this.head.x > p.width - MARGIN) {
+        desiredX = 0;
       }
 
-      // Update heading
-      if (this.turnState == TurnState.TURN_LEFT) {
-        this.heading = p5.Vector.rotate(this.heading, -TURN_RADIUS);
-      } else if (this.turnState == TurnState.TURN_RIGHT) {
-        this.heading = p5.Vector.rotate(this.heading, TURN_RADIUS);
+      if (this.head.y < MARGIN) {
+        desiredY = p.height;
+      } else if (this.head.y > p.height - MARGIN) {
+        desiredY = 0;
       }
 
-      this.bodyOrientations.push(this.heading);
-      if (this.bodyOrientations.length > WORM_LENGTH) {
-        this.bodyOrientations.shift();
+      if (
+        this.head.x < MARGIN ||
+        this.head.x > p.width - MARGIN ||
+        this.head.y < MARGIN ||
+        this.head.y > p.height - MARGIN
+      ) {
+        const target = new p5.Vector(desiredX, desiredY);
+        return p5.Vector.sub(target, this.head).limit(1);
       }
+      return new p5.Vector(0, 0);
+    }
+
+    _explore() {
+      // With some probability, head in a different direction
+      if (p.random(1) < 0.03) {
+        return p5.Vector.random2D();
+      }
+      return new p5.Vector(0, 0);
+    }
+
+    _avoidOthers(otherWorms) {
+      let away = new p5.Vector(0, 0);
+      for (let i = 0; i < N_WORMS; i++) {
+        if (otherWorms[i] === this) continue;
+
+        if (p5.Vector.dist(otherWorms[i].head, this.head) < 100) {
+          away.add(p5.Vector.sub(this.head, otherWorms[i].head));
+        }
+      }
+
+      away.limit(1);
+      return away;
     }
   }
 
+  /* =================== Sketch draw functions =================== */
   function displayDebugInfo() {
     // Draw red boxes around borders (worms should turn around)
-    sketch.push();
-    sketch.noStroke();
-    sketch.fill(RED_ALPHA);
+    p.push();
+    p.noStroke();
+    p.fill(RED_ALPHA);
 
-    sketch.rect(0, 0, sketch.width, MARGIN);
-    sketch.rect(0, sketch.height - MARGIN, sketch.width, MARGIN);
-    sketch.rect(0, MARGIN, MARGIN, sketch.height - MARGIN * 2);
-    sketch.rect(sketch.width - MARGIN, MARGIN, MARGIN, sketch.height - MARGIN * 2);
+    p.rect(0, 0, p.width, MARGIN);
+    p.rect(0, p.height - MARGIN, p.width, MARGIN);
+    p.rect(0, MARGIN, MARGIN, p.height - MARGIN * 2);
+    p.rect(p.width - MARGIN, MARGIN, MARGIN, p.height - MARGIN * 2);
 
     // Draw mouse position
-    sketch.stroke(0);
-    sketch.line(sketch.mouseX, 0, sketch.mouseX, 50);
-    sketch.line(0, sketch.mouseY, 50, sketch.mouseY);
-    sketch.pop();
+    p.stroke(0);
+    p.line(p.mouseX, 0, p.mouseX, 50);
+    p.line(0, p.mouseY, 50, p.mouseY);
+    p.pop();
   }
 
+  /* =================== Sketch input events =================== */
   // Global, propagates mouseOver events to objects which need them
   function handleMouseMoved() {
-    const location = new p5.Vector(sketch.mouseX, sketch.mouseY);
+    const location = new p5.Vector(p.mouseX, p.mouseY);
     for (let i = 0; i < worms.length; i++) {
       worms[i].handleMouseOver(location);
     }
   }
 
+  p.keyTyped = () => {
+    if (p.key === "d") {
+      debugModeOn = !debugModeOn;
+    } else if (p.key === " ") {
+      p.print("Advance generation");
+    }
+  };
+
   // Global state
   let worms = [];
+  let debugModeOn = false; // TODO: set to false
 
-  sketch.setup = () => {
-    const cvs = sketch.createCanvas(1000, 1000);
+  /* =================== Setup and draw =================== */
+  p.setup = () => {
+    p.frameRate(60);
+    const cvs = p.createCanvas(1000, 1000);
     cvs.mouseMoved(handleMouseMoved);
-    setupConstants();
-    sketch.print("Sketch pixel density: " + sketch.pixelDensity());
+    p.print("Sketch pixel density: " + p.pixelDensity());
 
     for (let i = 0; i < N_WORMS; i++) {
       worms.push(new Worm(i));
     }
 
-    sketch.background(255);
+    p.background(255);
+
+    // TODO: expose getting frame rate to application
+    // setInterval(() => {
+    //   p.print(p.frameRate());
+    // }, 1000);
   };
 
-  sketch.draw = () => {
+  p.draw = () => {
     // Clear screen
-    sketch.background(255);
+    p.background(255);
 
     for (let i = 0; i < worms.length; i++) {
+      worms[i].applyForces(worms);
       worms[i].step();
       worms[i].display();
     }
 
-    displayDebugInfo();
+    if (debugModeOn) {
+      displayDebugInfo();
+    }
   };
 };
 

@@ -1,17 +1,22 @@
+// Constants
 const MARGIN = 100;
-const N_WORMS = 25;
+const N_WORMS = 4;
 const WORM_LENGTH = 50;
 const WORM_DIAMETER = 10;
 
 // These constants use p5 functions and need to be set up in a function of their own
 let RED;
 let RED_ALPHA;
+const GREEN_ALPHA = (alpha) => color(0, 255, 0, alpha);
+const GRAY_ALPHA = (alpha) => color(100, 100, 100, alpha);
 let TURN_RADIUS;
+let UNIT_NORTH;
 
 function setupConstants() {
   RED = color(255, 0, 0);
   RED_ALPHA = color(255, 0, 0, 100);
-  TURN_RADIUS = radians(1);
+  TURN_RADIUS = radians(2);
+  UNIT_NORTH = new p5.Vector(0, 1);
 }
 
 const TurnState = {
@@ -26,8 +31,14 @@ class Worm {
     this.heading = p5.Vector.random2D();
     this.turnState = TurnState.GO_STRAIGHT;
     this.turnAround = false;
+
     this.body = [];
+    this.bodyOrientations = [];
+
     this.name = "Worm " + idx;
+
+    this.hovered = false;
+    this.speed = 1;
 
     // TODO: choose color based on instrument
     this.r = random(255);
@@ -35,26 +46,57 @@ class Worm {
     this.b = random(255);
   }
 
+  /* Draws the worm on-screen */
   display() {
     stroke(this.r, this.g, this.b);
     fill(this.r, this.g, this.b);
+    rectMode(CENTER);
+
+    const drawEvery = int(WORM_DIAMETER / 2 / this.speed);
 
     // TODO: change to rounded rect, add stripey genes
-    for (let i = 0; i < this.body.length; i += 10) {
-      const segment = this.body[i];
-      ellipse(segment.x, segment.y, WORM_DIAMETER, WORM_DIAMETER);
+    for (let i = 0; i < this.body.length; i += drawEvery) {
+      const radius =
+        i > this.body.length - drawEvery || i < drawEvery
+          ? WORM_DIAMETER / 2
+          : WORM_DIAMETER / 4;
+      this._drawWormSegment(
+        this.body[i],
+        this.bodyOrientations[i],
+        radius
+      );
     }
-    
+
     // Always include head
-    ellipse(this.head.x, this.head.y, WORM_DIAMETER, WORM_DIAMETER);
+    this._drawWormSegment(this.head, this.heading, WORM_DIAMETER / 2);
+    // ellipse(this.head.x, this.head.y, WORM_DIAMETER, WORM_DIAMETER);
 
     this._displayDebugInfo();
+  }
+
+  _drawWormSegment(position, orientation, radius) {
+    push(); // Save current drawing styles
+    const angle = UNIT_NORTH.angleBetween(orientation);
+    translate(position.x, position.y);
+    rotate(angle);
+    rect(0, 0, WORM_DIAMETER, WORM_DIAMETER, radius);
+    pop();
   }
 
   _displayDebugInfo() {
     stroke(RED);
     const nextPos = p5.Vector.add(this.head, p5.Vector.mult(this.heading, 30));
     line(this.head.x, this.head.y, nextPos.x, nextPos.y);
+
+    // Draw hover selection area
+    noStroke();
+    if (this.hovered) {
+      fill(GREEN_ALPHA(150));
+    } else {
+      fill(GRAY_ALPHA(150));
+    }
+
+    ellipse(this.head.x, this.head.y, WORM_DIAMETER * 4, WORM_DIAMETER * 4);
   }
 
   startTurnAround() {
@@ -73,6 +115,22 @@ class Worm {
     if (this.turnAround) {
       this.turnState = TurnState.GO_STRAIGHT;
       this.turnAround = false;
+    }
+  }
+
+  handleMouseOver(loc) {
+    if (p5.Vector.dist(loc, this.head) < WORM_DIAMETER * 2) {
+      if (!this.hovered) {
+        print(this.name + " was hovered over");
+        this.hovered = true;
+
+        this.r = random(255);
+        this.g = random(255);
+        this.b = random(255);
+      }
+    } else if (this.hovered) {
+      print(this.name + " hover exit");
+      this.hovered = false;
     }
   }
 
@@ -107,8 +165,10 @@ class Worm {
     }
 
     // Update head position
-    const PIXELS_PER_STEP = 1;
-    this.head = p5.Vector.add(this.head, p5.Vector.mult(this.heading, PIXELS_PER_STEP));
+    this.head = p5.Vector.add(
+      this.head,
+      p5.Vector.mult(this.heading, this.speed)
+    );
     this.body.push(this.head);
     if (this.body.length > WORM_LENGTH) {
       this.body.shift(); // Remove from front
@@ -116,9 +176,14 @@ class Worm {
 
     // Update heading
     if (this.turnState == TurnState.TURN_LEFT) {
-      this.heading.rotate(-TURN_RADIUS);
+      this.heading = p5.Vector.rotate(this.heading, -TURN_RADIUS);
     } else if (this.turnState == TurnState.TURN_RIGHT) {
-      this.heading.rotate(TURN_RADIUS);
+      this.heading = p5.Vector.rotate(this.heading, TURN_RADIUS);
+    }
+
+    this.bodyOrientations.push(this.heading);
+    if (this.bodyOrientations.length > WORM_LENGTH) {
+      this.bodyOrientations.shift();
     }
   }
 }
@@ -127,6 +192,8 @@ function displayDebugInfo() {
   // Draw red boxes around borders (worms should turn around)
   noStroke();
   fill(RED_ALPHA);
+  rectMode(CORNER);
+
   rect(0, 0, width, MARGIN);
   rect(0, height - MARGIN, width, MARGIN);
   rect(0, MARGIN, MARGIN, height - MARGIN * 2);
@@ -138,10 +205,20 @@ function displayDebugInfo() {
   line(0, mouseY, 50, mouseY);
 }
 
+// Global, propagates mouseOver events to objects which need them
+function handleMouseMoved() {
+  const location = new p5.Vector(mouseX, mouseY);
+  for (let i = 0; i < worms.length; i++) {
+    worms[i].handleMouseOver(location);
+  }
+}
+
+// Global state
 let worms = [];
 
 function setup() {
-  createCanvas(1000, 1000);
+  const cvs = createCanvas(1000, 1000);
+  cvs.mouseMoved(handleMouseMoved);
   setupConstants();
   print("Sketch pixel density: " + pixelDensity());
 
@@ -156,7 +233,7 @@ function draw() {
   // Clear screen
   background(255);
 
-  for (let i = 0; i < N_WORMS; i++) {
+  for (let i = 0; i < worms.length; i++) {
     worms[i].step();
     worms[i].display();
   }

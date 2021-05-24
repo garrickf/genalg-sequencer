@@ -1,7 +1,5 @@
 // Processing sketch for the interactive viz
 // TODO: integrate API calls, integrate React
-// Have to change to module mode. This will be picked up by React.
-import p5 from "p5";
 
 const s = (p) => {
   /* =================== Sketch constants =================== */
@@ -157,11 +155,6 @@ const s = (p) => {
       if (p5.Vector.dist(loc, this.head) < WORM_DIAMETER * 2) {
         if (!this.hovered) {
           p.print(this.name + " was hovered over");
-
-          if (reactHandleWormHover) {
-            reactHandleWormHover(this.name);
-          }
-
           this.hovered = true;
           this.speed = 0.2;
 
@@ -306,17 +299,12 @@ const s = (p) => {
   // Global state
   let worms = [];
   let debugModeOn = false; // TODO: set to false
-  let canvas;
-  let bgcolor = 255;
-
-  // Callbacks
-  let reactHandleWormHover;
 
   /* =================== Setup and draw =================== */
   p.setup = () => {
     p.frameRate(60);
-    canvas = p.createCanvas(1000, 1000);
-    canvas.mouseMoved(handleMouseMoved);
+    const cvs = p.createCanvas(1000, 1000);
+    cvs.mouseMoved(handleMouseMoved);
     p.print("Sketch pixel density: " + p.pixelDensity());
 
     for (let i = 0; i < N_WORMS; i++) {
@@ -333,7 +321,7 @@ const s = (p) => {
 
   p.draw = () => {
     // Clear screen
-    p.background(bgcolor);
+    p.background(255);
 
     for (let i = 0; i < worms.length; i++) {
       worms[i].applyForces(worms);
@@ -345,22 +333,6 @@ const s = (p) => {
       displayDebugInfo();
     }
   };
-
-  // For reactWrapper. Things which can be modified need to be hoisted out into
-  // the outermost scope
-  p.myCustomRedrawAccordingToNewPropsHandler = (newProps) => {
-    // Handle testProp
-    if (canvas) {
-      if (newProps.testProp) {
-        bgcolor = 0;
-      } else {
-        bgcolor = 255;
-      }
-    }
-
-    // TODO: is there a nicer update? compare before set, or use an object?
-    reactHandleWormHover = newProps.handleWormHover;
-  }
 };
 
-export default s;
+let mySketch = new p5(s);

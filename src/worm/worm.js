@@ -6,7 +6,7 @@ const s = (p) => {
   const MARGIN = 100;
   const N_WORMS = 16;
   const WORM_LENGTH = 16;
-  const WORM_DIAMETER = 16;
+  const WORM_DIAMETER = 14;
   const WORM_RADIUS = WORM_DIAMETER / 2;
   // How far apart segments are spaced (affects smoothness of body)
   const SPACING = 4;

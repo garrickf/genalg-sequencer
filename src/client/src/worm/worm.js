@@ -62,7 +62,7 @@ const s = (p) => {
       p.rectMode(p.CENTER);
 
       for (let i = 1; i < WORM_LENGTH; i++) {
-        const radius = i == WORM_LENGTH - 1 ? WORM_RADIUS : WORM_RADIUS / 1.3;
+        const radius = i === WORM_LENGTH - 1 ? WORM_RADIUS : WORM_RADIUS / 1.3;
         this._drawSegment(this.body[i], this.bodyOrientations[i], radius);
       }
 
@@ -308,6 +308,7 @@ const s = (p) => {
   let debugModeOn = false; // TODO: set to false
   let canvas;
   let bgcolor = 255;
+  let testState = false;
 
   // Callbacks
   let reactHandleWormHover;
@@ -351,10 +352,14 @@ const s = (p) => {
   p.myCustomRedrawAccordingToNewPropsHandler = (newProps) => {
     // Handle testProp
     if (canvas) {
-      if (newProps.testProp) {
-        bgcolor = 0;
-      } else {
-        bgcolor = 255;
+      if (testState !== newProps.testProp) {
+        
+        worms = [];
+        for (let i = 0; i < N_WORMS; i++) {
+          worms.push(new Worm(i));
+        }
+
+        testState = newProps.testProp;
       }
     }
 

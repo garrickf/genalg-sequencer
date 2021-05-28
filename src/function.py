@@ -48,6 +48,19 @@ class RosenbrocksFunc(Function):
         return self.b * (X[:, 1] - X[:, 0] ** 2) ** 2 + (self.a - X[:, 0]) ** 2
 
 
+class BoothsFunc(Function):
+    def __init__(self) -> None:
+        """Implements Booths's Function (see M. Kochenderfer and T. Wheeler, 
+        "Algorithms for Optimization," p. 426). Its global minimum is at [1, 3].
+        """
+        super().__init__()
+
+    def eval(self, X: np.ndarray) -> np.ndarray:
+        assert X.shape[1] == 2, f"Expected shape (batch_size, 2), got {X.shape}"
+        # f(x) = (x1 + 2 * x2 − 7)^2 +(2 * x1 + x2 − 5)^2
+        return (X[:, 0] + 2 * X[:, 1] - 7) ** 2 + (2 * X[:, 0] + X[:, 1] - 5) ** 2
+
+
 # Useful for just letting the genetic algorithm explore
 class UniformRandomFunc(Function):
     def __init__(self) -> None:

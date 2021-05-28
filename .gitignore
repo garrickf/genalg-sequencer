@@ -1,1 +1,10 @@
+# Mac files
 .DS_Store
+
+# IDE settings
+.vscode/
+.python-version
+
+# Cached files
+__pycache__/
+.pytest_cache/

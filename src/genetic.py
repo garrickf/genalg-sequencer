@@ -11,7 +11,7 @@ import numpy as np
 
 from function import BoothsFunc, RosenbrocksFunc, UniformRandomFunc
 
-N_INSTRUMENTS = 1
+N_INSTRUMENTS = 8
 EXPRESSION_DIM = 16
 TIMING_DIM = 16
 BAR_SIZE = 4
@@ -28,7 +28,7 @@ def init_chromosome():
     """
     instrument = np.random.choice(np.arange(N_INSTRUMENTS))
     expression = np.random.random_sample(EXPRESSION_DIM)
-    timing = np.random.random_sample(TIMING_DIM) < 0.25
+    timing = np.random.random_sample(TIMING_DIM) < 0.75
     return np.hstack([instrument, expression, timing])
 
 

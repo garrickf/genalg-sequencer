@@ -5,6 +5,7 @@ author: garrick
 Main file for genetic algorithm.
 """
 import math
+from collections import namedtuple
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -138,20 +139,33 @@ def crossover(c1, c2):
     return np.hstack([new_instrument, new_expression, new_timing])
 
 
-music_dynamics = (init_chromosome, crossover, mutate)
-
+GenAlgDynamics = namedtuple(
+    "GenAlgDynamics", ["init", "selection", "crossover", "mutate"]
+)
+music_dynamics = GenAlgDynamics(
+    init=init_chromosome,
+    selection=roulette_wheel_selection,
+    crossover=crossover,
+    mutate=mutate,
+)
 
 """Configurable genetic algorithm"""
 
 
 def genetic_algorithm_step(
-    population,
-    f,
-    dynamics=music_dynamics,
-    selection=roulette_wheel_selection,
-    pop_size=POPULATION_SIZE,
+    population, f, dynamics: GenAlgDynamics = music_dynamics, pop_size=POPULATION_SIZE,
 ):
-    _, crossover, mutate = dynamics
+    """
+    Args:
+      f (Function): An instance of a Function; the objective function to 
+        evaluate.
+    
+    """
+    selection, crossover, mutate = (
+        dynamics.selection,
+        dynamics.crossover,
+        dynamics.mutate,
+    )
 
     # Evaluate fitness
     y = f(population)
@@ -168,40 +182,49 @@ def genetic_algorithm_step(
     # Perform mutation
     new_population = np.array([mutate(c) for c in proto])
 
-    return new_population
+    return new_population, np.argsort(y), y
+
+
+GenAlgHistory = namedtuple("GenAlgHistory", ["populations", "argsorts", "evals"])
 
 
 def genetic_algorithm(
     function=UniformRandomFunc,
-    dynamics=music_dynamics,
-    selection=roulette_wheel_selection,
+    dynamics: GenAlgDynamics = music_dynamics,
     max_iters=30,
     pop_size=POPULATION_SIZE,
-):
-    """
+) -> GenAlgHistory:
+    """Runs genetic algorithm to optimize a given function with specified 
+    evolutionary dynamics.
+
     NOTE n_iters generations produces a history object with n_iters + 1 entries
     (count the initial population, too)
     """
-    init_chromosome, _, _ = dynamics
+    init_chromosome = dynamics.init
     iter = 0
     population = np.array([init_chromosome() for _ in range(pop_size)])
     f = function()
 
     all_populations = [population]
-    # TODO: add argsort indices and function evaluations to history for completeness
+    all_argsorts = []
+    all_evals = []
 
     while iter < max_iters:
         # print(f"Iteration {iter}")
 
         # XXX: could measure differences? or cache and plot?
-        population = genetic_algorithm_step(
-            population, f, dynamics=dynamics, selection=selection, pop_size=pop_size
+        population, argsort, evals = genetic_algorithm_step(
+            population, f, dynamics=dynamics, pop_size=pop_size
         )
         all_populations.append(population)
+        all_argsorts.append(argsort)
+        all_evals.append(evals)
 
         iter += 1
 
-    return all_populations
+    return GenAlgHistory(
+        populations=all_populations, argsorts=all_argsorts, evals=all_evals
+    )
 
 
 """Rosenbrock's Function"""
@@ -233,10 +256,11 @@ def truncation_selection(y, sample_size=5):
     return np.random.choice(top_idxs)
 
 
-rosenbrock_problem = (
-    rosenbrocks_init_chromosome,
-    rosenbrocks_crossover,
-    rosenbrocks_mutation,
+rosenbrock_problem = GenAlgDynamics(
+    init=rosenbrocks_init_chromosome,
+    selection=truncation_selection,
+    crossover=rosenbrocks_crossover,
+    mutate=rosenbrocks_mutation,
 )
 
 """Booths's Function"""
@@ -255,7 +279,12 @@ def booths_mutation(c):
     return np.clip(new_c, -10, 10)
 
 
-booths_problem = (booths_init_chromosome, booths_crossover, booths_mutation)
+booths_problem = GenAlgDynamics(
+    init=booths_init_chromosome,
+    selection=truncation_selection,
+    crossover=booths_crossover,
+    mutate=booths_mutation,
+)
 
 """Plotting code"""
 
@@ -298,17 +327,17 @@ def create_contours(function=RosenbrocksFunc, log=True):
         plt.contour(X[0], X[1], Z, levels=10, cmap="viridis_r")
 
 
-def plot_populations(history, function=RosenbrocksFunc):
+def plot_populations(history: GenAlgHistory, function=RosenbrocksFunc):
     # Plot a generation of design points
     for generation in [0, 1, 2, 3, 4, 5, 9, 99, -501, -101, -1]:
-        pop = history[generation]
+        pop = history.populations[generation]
         create_contours(function)
         plt.scatter(pop[:, 0], pop[:, 1], zorder=2, marker=".")
         # XXX: Why do I have to change z-order?
         plt.xlabel("x1")
         plt.ylabel("x2")
         plt.title(
-            f"Generation {generation + 1 if generation >= 0 else len(history) + generation + 1}"
+            f"Generation {generation + 1 if generation >= 0 else len(history.populations) + generation + 1}"
         )
         plt.show()
         # TODO: could animate sequence (and save plots)
@@ -322,17 +351,10 @@ if __name__ == "__main__":
     np.random.seed(222)
 
     if TRIAL == "rosenbrocks":
-        history = genetic_algorithm(
-            RosenbrocksFunc,
-            rosenbrock_problem,
-            selection=truncation_selection,
-            max_iters=999,
-        )
+        history = genetic_algorithm(RosenbrocksFunc, rosenbrock_problem, max_iters=999)
 
         plot_populations(history)
     elif TRIAL == "booths":
-        history = genetic_algorithm(
-            BoothsFunc, booths_problem, selection=truncation_selection, max_iters=999,
-        )
+        history = genetic_algorithm(BoothsFunc, booths_problem, max_iters=999)
 
         plot_populations(history, BoothsFunc)

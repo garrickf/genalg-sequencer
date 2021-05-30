@@ -136,6 +136,7 @@ buffers.postln;
 buffers.postln;
 )
 
+
 (
 Pdef(\a);
 ~kickBuffer
@@ -146,3 +147,9 @@ b.size
 	"That was true bb".postln;
 }, {})
 )
+
+// May need to set out device
+ServerOptions.outDevices;
+Server.default.options.outDevice_("MacBook Pro Speakers");
+Server.default.options.outDevice_("External Headphones");
+

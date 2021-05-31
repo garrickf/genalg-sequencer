@@ -12,7 +12,7 @@ import numpy as np
 
 from function import BoothsFunc, RosenbrocksFunc, UniformRandomFunc
 
-N_INSTRUMENTS = 8
+N_INSTRUMENTS = 6
 EXPRESSION_DIM = 16
 TIMING_DIM = 16
 BAR_SIZE = 4

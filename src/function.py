@@ -6,6 +6,7 @@ Function utility class. All functions can subclass this for consistent behavior
 in the genetic algorithm optimizer.
 """
 import numpy as np
+from sklearn.linear_model import LogisticRegression
 
 
 class Function:
@@ -71,22 +72,44 @@ class UniformRandomFunc(Function):
         return np.random.random_sample((batch_size,))
 
 
-class UserPreferenceFunc(Function):
+class SurrogateFunc(Function):
     def __init__(self) -> None:
-        # XXX: allow configuration with an arbitrary model (logistic, knn)
+        """Superclass defining an objective/fitness function that is 
+        approximated using a fit() class method.
+        """
         super().__init__()
-        self.data = np.array([])  # Hold an np.array
 
-    def eval(self, X: np.ndarray) -> np.ndarray:
-        # TODO: implement
-        raise NotImplementedError("Not implemented")
-
-    def update_preferences(self, x, label) -> None:
+    def fit(self, X, labels, weights=None) -> None:
         """I'll put something here eventually...
 
         Args:
-          x (np.ndarray): a single design point
+          X (np.ndarray): shape (batch_size, n_dim) array of labelled design points
           label (int): the label for the point (0 for dislike, 1 for like)
         """
-        # TODO: implement
-        raise NotImplementedError("Not implemented")
+        raise NotImplementedError("Subclasses must override this function")
+
+
+class LogRegUserPreferenceFunc(SurrogateFunc):
+    def __init__(self, random_state=222, **kwargs) -> None:
+        super().__init__()
+        self.model = LogisticRegression(random_state=random_state, **kwargs)
+        self.is_fitted = False
+
+    def fit(self, X, labels, weights=None) -> None:
+        """NOTE weights allow for recency-based weighting of samples (earlier
+        samples matter less than more recent ones).
+
+        Also, NOTE fit will overwrite data
+        """
+        self.model.fit(X, labels, sample_weight=weights)
+        self.is_fitted = True
+
+    def eval(self, X: np.ndarray) -> np.ndarray:
+        if self.is_fitted:
+            # A lower objective value is better, so we use the probability that 
+            # the user dislikes the design point. The lower this is, the better.
+            return self.model.predict_proba(X)[:, 0]
+        else:
+            # Just return random values
+            batch_size = len(X)
+            return np.random.random_sample((batch_size,))

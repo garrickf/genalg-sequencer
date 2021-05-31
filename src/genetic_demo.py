@@ -7,17 +7,28 @@ produce music.
 # TODO: add colors
 """
 from collections import defaultdict
-from genetic import genetic_algorithm_step, music_dynamics
-from function import UniformRandomFunc, UserPreferenceFunc
-from pythonosc import udp_client
 
 import numpy as np
+from pythonosc import udp_client
+
+from function import UniformRandomFunc, LogRegUserPreferenceFunc
+from genetic import genetic_algorithm_step, music_dynamics
+import plot
+
+import matplotlib.pyplot as plt
 
 # from synthesis import *  # Potential decomposition of sound-producing functions here
 
 POPULATION_SIZE = 20
 AUDIO_SERVER_IP = "127.0.0.1"
 AUDIO_SERVER_PORT = 57120
+
+# Constants
+ADDR_NEXT = "/next"
+ADDR_PUSH = "/push"
+ADDR_CLEAR = "/clear"
+ADDR_START_RECORDING = "/startRecording"
+ADDR_STOP_RECORDING = "/stopRecording"
 
 # TODO: move to a util file
 def chromosome_to_osc(c: np.ndarray):
@@ -45,6 +56,7 @@ class HandleQuit(Handler):
     def eval(self) -> None:
         global quit  # To modify, must mark global
         quit = True
+        client.send_message(ADDR_CLEAR, [])  # Cleanup
         print("Goodbye!")
 
     def helptext(self) -> str:
@@ -53,7 +65,16 @@ class HandleQuit(Handler):
 
 class HandleRecord(Handler):
     def eval(self) -> None:
-        print("Not implemented!")  # TODO: implement
+        global recording
+
+        if not recording:
+            print("Starting recording.")
+            client.send_message(ADDR_START_RECORDING, [])
+            recording = True
+        else:
+            print("Stopping recording.")
+            client.send_message(ADDR_STOP_RECORDING, [])
+            recording = False
 
     def helptext(self) -> str:
         return "Toggles recording."
@@ -63,7 +84,10 @@ class HandleLike(Handler):
     def eval(self) -> None:
         if cur_chromosome is None:
             print("No current Chromosome. Use 'next' to play one!")
-        print("Not implemented!")  # TODO: implement
+            return
+
+        dataset.append((cur_chromosome, 1))
+        print("Liked Chromosome. You'll see more like this in the future.")
 
     def helptext(self) -> str:
         return "Like the currently playing Chromosome."
@@ -73,7 +97,10 @@ class HandleDislike(Handler):
     def eval(self) -> None:
         if cur_chromosome is None:
             print("No current Chromosome. Use 'next' to play one!")
-        print("Not implemented!")  # TODO: implement
+            return
+
+        dataset.append((cur_chromosome, 0))
+        print("Disliked Chromosome. You'll see less like this in the future.")
 
     def helptext(self) -> str:
         return "Dislike the currently playing Chromosome."
@@ -85,6 +112,21 @@ class HandleAdvance(Handler):
         assert iter is not None
 
         # TODO: learn surrogate function based on current user input
+        X, y = [], [] 
+        if dataset:  # Non-empty
+            X, y = zip(*dataset)
+        
+        X, y = np.array(X), np.array(y)
+
+        # Plot and advance (TODO: refine and split plot code into another handler)
+        if X.size > 0:
+            plot.tsne_scatter(X, y)
+            plt.show()
+            plt.clf()
+            f.fit(X, y)  # Update function based on user preferences
+            plot.approx_voronoi_tesselation(f.model, X, y)
+            plt.show()
+            plt.clf()
 
         cur_population, _, _ = genetic_algorithm_step(
             cur_population, f, dynamics=dynamics, pop_size=POPULATION_SIZE,
@@ -103,7 +145,10 @@ class HandlePush(Handler):
     def eval(self) -> None:
         if cur_chromosome is None:
             print("No current Chromosome. Use 'next' to play one!")
-        print("Not implemented!")  # TODO: implement
+            return
+
+        print("Pushing.")
+        client.send_message(ADDR_PUSH, [])
 
     def helptext(self) -> str:
         return "Commit the currently playing Chromosome and start a new Part."
@@ -139,7 +184,7 @@ class HandleNext(Handler):
         print(cur_chromosome)  # TODO: remove debug line/replace with something prettier
 
         args = chromosome_to_osc(cur_chromosome)
-        client.send_message("/playInstrument", args)
+        client.send_message(ADDR_NEXT, args)
 
     def helptext(self) -> str:
         return "Play the next Chromosome in the current population."
@@ -147,7 +192,9 @@ class HandleNext(Handler):
 
 class HandleClear(Handler):
     def eval(self) -> None:
-        print("Not implemented!")  # TODO: implement
+        print("Clearing...")
+
+        client.send_message(ADDR_CLEAR, [])
 
     def helptext(self) -> str:
         return "Clear all playing Parts."
@@ -221,10 +268,12 @@ f = None
 dynamics = music_dynamics
 iter = None
 client = None
+dataset = []
+recording = False
 
 
 def initialize_demo_state(
-    ip=AUDIO_SERVER_IP, port=AUDIO_SERVER_PORT, pop_size=POPULATION_SIZE
+    function, ip=AUDIO_SERVER_IP, port=AUDIO_SERVER_PORT, pop_size=POPULATION_SIZE
 ):
     """Begins genetic algorithm, connects to OSC server for producing sound"""
     global client, cur_population, f, iter
@@ -237,7 +286,7 @@ def initialize_demo_state(
     init_chromosome = dynamics.init
     iter = 0
     cur_population = np.array([init_chromosome() for _ in range(pop_size)])
-    f = UniformRandomFunc()
+    f = function()
 
     print(f"Generation {iter + 1}")
 
@@ -254,7 +303,7 @@ def get_input():
 
 # read-eval-print loop
 def repl():
-    initialize_demo_state()
+    initialize_demo_state(LogRegUserPreferenceFunc)
 
     print("Enter commands ('help' for help):")
     while not quit:

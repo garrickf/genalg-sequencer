@@ -8,3 +8,6 @@
 # Cached files
 __pycache__/
 .pytest_cache/
+
+# Sounds in the data directory
+src/data/*.wav

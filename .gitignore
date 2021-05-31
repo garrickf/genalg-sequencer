@@ -11,3 +11,12 @@ __pycache__/
 
 # Sounds in the data directory
 src/data/*.wav
+
+# TeX output
+tex/*.aux
+tex/*.log
+tex/*.pdf
+indent.log
+*.fls
+*.synctex.gz
+*.fdb_latexmk

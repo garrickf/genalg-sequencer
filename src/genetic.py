@@ -33,11 +33,11 @@ def init_chromosome(density=0.75):
     return np.hstack([instrument, expression, timing])
 
 
-def get_instrument(chromosome):
+def get_instrument(chromosome: np.ndarray) -> int:
     return int(chromosome[0])
 
 
-def get_expression(chromosome):
+def get_expression(chromosome: np.ndarray) -> np.ndarray:
     """
     Returns:
       (np.ndarray): copy of the expression information
@@ -45,7 +45,7 @@ def get_expression(chromosome):
     return chromosome[1 : EXPRESSION_DIM + 1].copy()
 
 
-def get_timing(chromosome):
+def get_timing(chromosome: np.ndarray) -> np.ndarray:
     """
     Args:
       chromosome (np.ndarray): the chromosome

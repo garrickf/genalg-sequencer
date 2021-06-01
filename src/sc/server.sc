@@ -58,6 +58,17 @@ Routine({
 		});
 	};
 
+	~interpolateValue = { | lo, hi, amt |
+		var diff = hi - lo;
+		diff * amt + lo;
+	};
+
+	~updateExpression = { | patternRef, expression |
+		// Pbindef(patternRef, \modFreq, [7, 9, 10, 15, 20, 30].choose);
+		Pbindef(patternRef, \modFreq, ~interpolateValue.value(5, 40, expression[0]));
+		Pbindef(patternRef, \carFreq, ~interpolateValue.value(400, 1200, expression[0]));
+	};
+
 	~initPattern = { | patternRef |
 		var pattern;
 		pattern = Pbind(
@@ -135,6 +146,7 @@ Routine({
 		});
 
 		~updateInstrument.value(\cur, instrument);
+		~updateExpression.value(\cur, expression);
 		~updateTiming.value(\cur, timing);
 	}, "/next");
 
@@ -212,6 +224,7 @@ Pbindef(\0, \bufref, ~buffers[0]);
 ~buffers
 ~initPattern.value(\0)
 ~getNumInstruments.value
+~interpolateValue.value(4, 8, 0.5)
 
 Pdef(\0).set
 

@@ -8,14 +8,19 @@ produce music.
 """
 from collections import defaultdict
 
+import matplotlib.pyplot as plt
 import numpy as np
 from pythonosc import udp_client
 
-from function import UniformRandomFunc, LogRegUserPreferenceFunc
-from genetic import genetic_algorithm_step, music_dynamics
 import plot
-
-import matplotlib.pyplot as plt
+from function import LogRegUserPreferenceFunc, UniformRandomFunc
+from genetic import (
+    genetic_algorithm_step,
+    get_expression,
+    get_instrument,
+    get_timing,
+    music_dynamics,
+)
 
 # from synthesis import *  # Potential decomposition of sound-producing functions here
 
@@ -26,13 +31,15 @@ AUDIO_SERVER_PORT = 57120
 # Constants
 ADDR_NEXT = "/next"
 ADDR_PUSH = "/push"
+ADDR_POP = "/pop"
 ADDR_CLEAR = "/clear"
 ADDR_START_RECORDING = "/startRecording"
 ADDR_STOP_RECORDING = "/stopRecording"
 
 # TODO: move to a util file
+# Preserve correct types
 def chromosome_to_osc(c: np.ndarray):
-    return c.tolist()
+    return [get_instrument(c)] + get_expression(c).tolist() + get_timing(c).tolist()
 
 
 class Handler:
@@ -137,6 +144,7 @@ class HandleAdvance(Handler):
         print(f"Generation {iter + 1}")
 
         cur_chromosome_idx = None
+        # NOTE We keep the current chromosome playing
 
     def helptext(self) -> str:
         return "Advance a generation."
@@ -155,7 +163,7 @@ class HandlePlot(Handler):
             plot.tsne_scatter(X, y)
             plt.show()
             plt.clf()
-            
+
             plot.approx_voronoi_tesselation(f.model, X, y)
             plt.show()
             plt.clf()
@@ -190,7 +198,10 @@ class HandlePop(Handler):
     def eval(self) -> None:
         if cur_chromosome is None:
             print("No current Chromosome. Use 'next' to play one!")
-        print("Not implemented!")  # TODO: implement
+            return
+
+        print("Popping.")
+        client.send_message(ADDR_POP, [])
 
     def helptext(self) -> str:
         return "Remove the most recently added Chromosome."

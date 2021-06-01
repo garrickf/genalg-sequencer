@@ -16,6 +16,8 @@ src/data/*.wav
 tex/*.aux
 tex/*.log
 tex/*.pdf
+# Except the paper
+!tex/paper.pdf
 indent.log
 *.fls
 *.synctex.gz

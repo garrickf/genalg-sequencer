@@ -20,3 +20,4 @@ indent.log
 *.fls
 *.synctex.gz
 *.fdb_latexmk
+tex/IEEEtran.cls

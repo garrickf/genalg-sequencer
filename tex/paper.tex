@@ -115,9 +115,9 @@ the mechanisms with which it evolves over time.
 \subsection{Chromosome Structure and Representation}
 
 To represent points associated with individuals in the design space, we used
-real-valued chromosomes (n-dimensional vectors in $\mathbb{R}^n$) with
-some components constrained to be integers. Each chromosome is interpreted as
-having three main portions:
+real-valued chromosomes ($n$-dimensional vectors in
+$\mathbb{R}^n$) with some components constrained to be integers. Each
+chromosome is interpreted as having three main portions:
 
 \begin{enumerate}
     \item A single positive integer $k \in \{1, \dots K\}$, the ``instrument,'' encodes
@@ -125,7 +125,8 @@ having three main portions:
           available to the
           sequencer.
     \item A $\mathbb{R}^{n_\text{emb}}$ chunk of the chromosome, the
-          ``expression,'' encompasses all points in the design space for instrument k.
+          ``expression,'' encompasses all points in the design space for instrument
+          $k$.
           Client code in an audio synthesis program can ingest these numbers and map them
           to properties of the instrument (such as the frequency, filter cutoff, reverb,
           attack, etc.). For us, $n_\text{emb} = 16$.
@@ -169,10 +170,9 @@ steps. The distribution is weighted more towards sounding a note
 although this can be tuned.
 
 Selection determines which chromosomes will be parents for the next generation.
-We considered two approaches for selection.
-
-The first selection method we considered was truncation selection, where we
-sample from the top-$k$ chromosomes in the population.
+We considered two approaches for selection. The first method considered was
+truncation selection, where we sample from the top-$k$
+chromosomes in the population.
 
 The second selection method we considered was roulette wheel selection, also
 known as fitness proportionate selection. In this method, each parent is chosen
@@ -181,7 +181,7 @@ population. Compared to truncation selection, roulette wheel gives a small
 chance of less fit individuals being selected, which can help maintain genetic
 variability in future generations.
 
-Our method for implementing roulette wheel selection involves selecting the
+Our method for implementing roulette wheel selection involved computing the
 maximum objective value $y_\text{max}$ among objective values
 $y_1, \dots, y_{N_\text{pop}}$, where $N_\text{pop}$ is the population size.
 Then, the selection likelihood for an individual with objective value
@@ -220,7 +220,7 @@ Mutation allows new traits to appear in the population, driving the exploration
 of the genetic algorithm. For our application, we mutate each component in the
 chromosome (resample it) with some fixed probability. In our implementation,
 the probabilities are specific to the the instrument, expression, and timing
-regions of the chromosome, and they be modified.
+regions of the chromosome, and they can be modified.
 
 \subsection{Fitness Approximation Based on User Feedback}
 
@@ -231,8 +231,9 @@ idea is to collect observations of the user's tastes (like or dislike), and fit
 an objective function to those observations.
 
 The methodology introduced in \cite{textbook} for fitting surrogate
-models of an objective function from data can also be applied to this fitness
-function. Such methods are often referred to as fitness approximation.
+models of an objective function from data can also be applied to a fitness
+function for a genetic algorithm. Such methods are often referred to as fitness
+approximation.
 
 This is a natural fit for a fitness function which depends on the the
 preferences of the user; function evaluations are expensive in the sense that
@@ -240,8 +241,8 @@ they would take up a lot of the user's time, which can result in poor user
 experience (imagine having to listen to and evaluate tens or hundreds of
 individuals).
 
-Instead, we bootstrap the fitness function and capture he user's preferences by
-fitting a surrogate model, which steers the genetic algorithm towards sounds
+Instead, we bootstrap the fitness function and capture the user's preferences
+by fitting a surrogate model, which steers the genetic algorithm towards sounds
 and patterns the user likes more.
 
 Assuming that we get the data from some upstream source (see Section
@@ -301,7 +302,7 @@ of parameters of user-specified types (for example, the individual values of
 our chromosome). The audio synthesis process in Supercollider is set up to
 respond to various OSC addresses, comprising a callable API into the
 synthesizer/sequencer. One may use the API to listen to what a chromosome
-sounds like, "push" a track onto the mix to layer sounds, etc.
+sounds like, ``push'' a track onto the mix to layer sounds, etc.
 
 A simple REPL (read-eval-print loop) client (see Fig.~\ref{repl}),
 written in Python, was implemented to allow a user to orchestrate the entire
@@ -319,7 +320,7 @@ new generation of individuals, recording, and more.
 
 The genetic algorithm itself was developed in Python. While some Python
 packages exist for performing optimization using a genetic algorithm, the
-genetic algorithm here was implemented from scratch, for the author's
+genetic algorithm here was implemented from scratch for the author's
 edification. The external package scikit-learn \cite{sklearn} was used
 for fitting the approximate fitness functions.
 
@@ -353,7 +354,7 @@ multiple generations.
     }
     \caption{Running genetic algorithm optimization for 999 iterations for Rosenbrock's
         function (top) and Booth's function (bottom). Plots, in reading order, are of the individuals at iteration 1 (the initial
-        population), 2, 3, 5, 10, 100, 500, 900, and 1000.}
+        population), 2, 3, 5, 10, 100, 500, 900, and 1000. For reference, the global minimum of Rosenbrock's function is at $(1, 1)$.}
     \label{test}
 \end{figure}
 
@@ -387,9 +388,10 @@ Fig.~\ref{gen2} ).
     }
     \caption{An example run where the surrogate model can linearly separate the data.
         Points are colored according to their true label (yellow for
-        positive, purple for negative). Suggested points (blue) are exclusively in the positive
+        positive, purple for negative). Points in the next generation (blue) are primarily in the
+        positive
         region of the
-        classifier.}
+        classifier, with mutation adding some noise.}
     \label{gen1}
 \end{figure}
 
@@ -428,13 +430,13 @@ that reduces the friction for trying new things.
 Our project seeks to augment music creation through applying genetic algorithms
 to the model of a synthesizer and sequencer. Horner and Goldberg also apply
 genetic algorithms to music creation, focusing on the problem model of
-``thematic'' bridging, which seeks to interpolate from a starting musical
+``thematic bridging,'' which seeks to interpolate from a starting musical
 pattern to a final one \cite{horner}. A solution's fitness is a
 function of how closely the ending pattern matches the starting one. In
 contrast, our fitness function is interactive, or dependent on user input.
 Whereas the iterative process for music generation in their work involves
 repeated runs of the algorithm until the results are acceptable, our work
-introduces human input into the loop for steering the genetic algorithm.
+utilizes human input to alter the fitness function of the genetic algorithm.
 
 Matíc also applies genetic algorithms to music composition, modulating rhythms
 and pitches with a predefined set of mutation operations
@@ -446,9 +448,9 @@ model does not work with pitches or varied durations of notes, simplifying our
 design space to that of a sequencer.
 
 Some systems for drum loop evolution have been produced (e.g. MuSing
-\cite{musing}). Our algorithm works in a similar way. Whereas some
-drum machines rely on fixed samples, we have the ability to evolve the
-synthesis of sounds though the expression component of a chromosome.
+\cite{musing}). Our algorithm works in a similar way; however,
+instead of relying on a set of fixed drum samples, we have the ability to
+evolve the synthesis of sounds though the expression component of a chromosome.
 
 Many musical artists use elements of genetic algorithms or computation in their
 performance, and their tools to do so are often highly specialized. George
@@ -467,10 +469,9 @@ exploration of a large design space where function evaluations are relatively
 cheap, and expert knowledge is useful. One can imagine algorithms being applied
 to help designers or artists find and rapidly prototype new ideas.
 
-It would be exciting to see and extension with more instruments and more values
+It would be exciting to see an extension with more instruments and more values
 and ranges for expression. For example, one such extension could add melodic
-expression to the chromosome, whose coordinates can encode the pitch of each
-note.
+expression to the chromosome, whose coordinates encode the pitch of each note.
 
 %%%%%%%%%%%%%%%%%% New stuff ends here.
 

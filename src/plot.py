@@ -85,7 +85,7 @@ def tsne_scatter(X, labels):
 
 
 def new_population_locations(
-    model, X, labels, cur_population, resolution=500, alpha=0.3
+    model, X, labels, cur_population, resolution=500, alpha=0.1
 ):
     pop_size = len(cur_population)
     # Project both population and training data

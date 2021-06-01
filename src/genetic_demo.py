@@ -112,25 +112,26 @@ class HandleAdvance(Handler):
         assert iter is not None
 
         # TODO: learn surrogate function based on current user input
-        X, y = [], [] 
+        X, y = [], []
         if dataset:  # Non-empty
             X, y = zip(*dataset)
-        
+
         X, y = np.array(X), np.array(y)
 
         # Plot and advance (TODO: refine and split plot code into another handler)
         if X.size > 0:
-            plot.tsne_scatter(X, y)
-            plt.show()
-            plt.clf()
+            # plot.tsne_scatter(X, y)
+            # plt.show()
+            # plt.clf()
             f.fit(X, y)  # Update function based on user preferences
-            plot.approx_voronoi_tesselation(f.model, X, y)
-            plt.show()
-            plt.clf()
+            # plot.approx_voronoi_tesselation(f.model, X, y)
+            # plt.show()
+            # plt.clf()
 
         cur_population, _, _ = genetic_algorithm_step(
             cur_population, f, dynamics=dynamics, pop_size=POPULATION_SIZE,
         )
+        all_populations.append(cur_population)
         iter += 1
 
         print(f"Generation {iter + 1}")
@@ -139,6 +140,37 @@ class HandleAdvance(Handler):
 
     def helptext(self) -> str:
         return "Advance a generation."
+
+
+class HandlePlot(Handler):
+    def eval(self) -> None:
+        X, y = [], []
+        if dataset:  # Non-empty
+            X, y = zip(*dataset)
+
+        X, y = np.array(X), np.array(y)
+
+        # Plot and advance (TODO: refine and split plot code into another handler)
+        if X.size > 0:
+            plot.tsne_scatter(X, y)
+            plt.show()
+            plt.clf()
+            
+            plot.approx_voronoi_tesselation(f.model, X, y)
+            plt.show()
+            plt.clf()
+
+            plot.new_population_locations(f.model, X, y, cur_population)
+            plt.show()
+            plt.clf()
+
+            plot.population_histogram(all_populations)
+            plt.show()
+            plt.clf()
+            pass
+
+    def helptext(self) -> str:
+        return "Plot visualizations of the algorithm's progress."
 
 
 class HandlePush(Handler):
@@ -233,6 +265,7 @@ handle_push = HandlePush()
 handle_pop = HandlePop()
 handle_clear = HandleClear()
 handle_next = HandleNext()
+handle_plot = HandlePlot()
 # XXX: Can add solo (to toggle focus on current part), mute
 
 # NOTE can include shortcuts
@@ -252,6 +285,7 @@ command_handlers = {
     "n": handle_next,
     "next": handle_next,
     "p": handle_push,
+    "plot": handle_plot,
     "pop": handle_pop,
     "push": handle_push,
     "q": handle_quit,
@@ -264,6 +298,7 @@ quit = False
 cur_population = None
 cur_chromosome_idx = None
 cur_chromosome = None
+all_populations = []
 f = None
 dynamics = music_dynamics
 iter = None
@@ -286,6 +321,7 @@ def initialize_demo_state(
     init_chromosome = dynamics.init
     iter = 0
     cur_population = np.array([init_chromosome() for _ in range(pop_size)])
+    all_populations.append(cur_population)
     f = function()
 
     print(f"Generation {iter + 1}")

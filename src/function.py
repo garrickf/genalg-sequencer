@@ -101,6 +101,8 @@ class LogRegUserPreferenceFunc(SurrogateFunc):
 
         Also, NOTE fit will overwrite data
         """
+        if 0 not in labels or 1 not in labels:  # Need one of each label
+            return
         self.model.fit(X, labels, sample_weight=weights)
         self.is_fitted = True
 

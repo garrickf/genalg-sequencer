@@ -22,14 +22,14 @@ POPULATION_SIZE = 20
 """Generative music dynamics"""
 
 
-def init_chromosome():
+def init_chromosome(density=0.75):
     """
     Returns:
       (np.ndarray) chromosome of shape (1 + expression_dim + timing_dim,)
     """
     instrument = np.random.choice(np.arange(N_INSTRUMENTS))
     expression = np.random.random_sample(EXPRESSION_DIM)
-    timing = np.random.random_sample(TIMING_DIM) < 0.75
+    timing = np.random.random_sample(TIMING_DIM) < density
     return np.hstack([instrument, expression, timing])
 
 
@@ -329,19 +329,23 @@ def create_contours(function=RosenbrocksFunc, log=True):
 
 def plot_populations(history: GenAlgHistory, function=RosenbrocksFunc):
     # Plot a generation of design points
-    for generation in [0, 1, 2, 3, 4, 5, 9, 99, -501, -101, -1]:
+    
+    for subplot_idx, generation in enumerate([0, 1, 2, 4, 9, 99, 499, 899, 999]):
         pop = history.populations[generation]
+        plt.subplot(3, 3, subplot_idx + 1)
         create_contours(function)
         plt.scatter(pop[:, 0], pop[:, 1], zorder=2, marker=".")
         # XXX: Why do I have to change z-order?
-        plt.xlabel("x1")
-        plt.ylabel("x2")
-        plt.title(
-            f"Generation {generation + 1 if generation >= 0 else len(history.populations) + generation + 1}"
-        )
-        plt.show()
-        # TODO: could animate sequence (and save plots)
-        plt.clf()
+        # plt.xlabel("x1")
+        # plt.ylabel("x2")
+        plt.xticks(fontsize=6)
+        plt.yticks(fontsize=6)
+        # plt.title(
+        #     f"Generation {generation + 1 if generation >= 0 else len(history.populations) + generation + 1}"
+        # )
+    plt.show()
+    # TODO: automate save plot
+    plt.clf()
 
 
 # TODO: add argparse, allow running different trials

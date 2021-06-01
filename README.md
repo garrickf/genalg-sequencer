@@ -49,7 +49,7 @@ feedback to the music genetic algorithm, monitor and manipulate its progress,
 and listen to and record the resulting sound.
 
 Unfortunately, I haven't yet produced a script for the SuperCollider server.
-You'll need to run it inside the SuperCollider IDE, which require some minimal
+You'll need to run it inside the SuperCollider IDE, which requires some minimal
 knowledge to get started. I hope in the future to be able to initialize the
 server simply by invoking the `scsynth` and `sclang` executables.
 
